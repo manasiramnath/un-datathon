@@ -1,0 +1,216 @@
+---
+title: "un_datathon"
+output:
+  word_document: default
+  html_document: default
+date: "2023-11-04"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r}
+install.packages('dplyr')
+library(dplyr)
+```
+
+```{r}
+internet_use <- UNdata_Export_20231104_183511233
+internet_use = internet_use %>% slice(1:25)
+mobile_use <- read.csv("mobile.csv")
+mobile_use = mobile_use %>% slice(1:25)
+tele_use <- read.csv("tele.csv")
+tele_use = tele_use %>% slice(1:25)
+
+library("ggplot2")
+ggplot(data = internet_use, aes(x=Year, y=Value)) + 
+  geom_line() +
+  theme_minimal() +
+  ggtitle("Percentage of Individuals in Nigeria Using the Internet (1990-2014)") +
+  theme(panel.grid = element_blank()) + 
+  ylab("Percentage")  
+```
+
+```{r}
+jpeg(filename = "internetuse.jpeg")
+library("ggplot2")
+ggplot(data = internet_use, aes(x=Year, y=Value)) + 
+  geom_line() +
+  theme_minimal() +
+  ggtitle("Percentage of Individuals in Nigeria Using the Internet (1990-2014)") +
+  theme(panel.grid = element_blank()) + 
+  ylab("Percentage")  
+dev.off()
+```
+
+```{r}
+schl_connect <- read_csv("schl_connect.csv")
+jpeg(filename = "internet_use_schl.jpeg")
+barplot(schl_connect$Perc, names.arg = schl_connect$Education_Level, col = "darkblue", xlab = "Education Level", ylab = "Percentage", main = "Percentage of Children with\nInternet Connection at home by Education Level")
+dev.off()
+```
+
+sectc1_plantingw4: Data collected through Post Planting Community Questionnaire, Section C1 (Respondent Characteristics)
+sect4b_plantingw4: Data collected through Post Planting Household Questionnaire, Section 4B (ICT - Mobile Phone Banking)
+
+```{r}
+char <- read_csv("sectc1_plantingw4.csv")
+ict <- read_csv("sect4b_plantingw4.csv")
+```
+```{r}
+# subset to columns of interest (char)
+char = subset(char, select = -c(10:13))
+char <- char %>% rename(urban = sector,
+                        sex = c01q02,
+                        age = c01q03,
+                        edu = c01q06)
+
+# subset to columns of interest (ict)
+ict = subset(ict, select = -c(6,8,10,19,20))
+ict <- ict %>% rename(mobilephone = s4bq8,
+                      internet = s4bq14,
+                      personal_device = s4bq15__1,
+                      other_household = s4bq15__2,
+                      relative_friend = s4bq15__3,
+                      workplace = s4bq15__4,
+                      cafe = s4bq15__5,
+                      hotspot = s4bq15__6)
+
+# merge dataframes by lga
+dta <- merge(char, ict, by = "lga")
+
+# delete irrelevant columns again
+dta = subset(dta, select = -c(11:14,7))
+
+# make a copy
+d <- dta
+
+# cleaning education categories
+d$edu <- ifelse(d$edu == 0,0, d$edu)
+d$edu <- ifelse(d$edu %in% c(1,2),1, d$edu)
+d$edu <- ifelse(d$edu %in% c(11,12,13,14,15,16), 2, d$edu)
+d$edu <- ifelse(d$edu %in% c(21,22,23), 3, d$edu)
+d$edu <- ifelse(d$edu %in% c(24,25,26), 4, d$edu)
+d$edu <- ifelse(d$edu == 27, 5, d$edu)
+d$edu <- ifelse(d$edu == 28, 6, d$edu)
+d$edu <- ifelse(d$edu %in% c(31,33,34,41,42,43, 51, 52, 61, 321, 322), 7, d$edu)
+
+# cleaning mobile and internet access variable
+d$mobilephone <- ifelse(is.na(d$mobilephone), NA, ifelse(d$mobilephone == 2, 0, d$mobilephone))
+d$internet <- ifelse(is.na(d$internet), NA, ifelse(d$internet == 2, 0, d$internet))
+
+# cleaning sector variable
+d$urban <- ifelse(is.na(d$urban), NA, ifelse(d$urban == 2, 0, d$urban))
+```
+
+```{r}
+# Calculate the percentage of individuals with access to mobile phones
+mobile_access <- table(d$mobilephone)
+mobile_percentage <- (mobile_access[["1"]] / sum(mobile_access)) * 100
+
+# Calculate the percentage of individuals with internet access
+internet_access <- table(d$internet)
+internet_percentage <- (internet_access[["1"]] / sum(internet_access)) * 100
+
+# Print the results
+cat("Percentage with Mobile Phone Access: ", mobile_percentage, "%\n")
+cat("Percentage with Internet Access: ", internet_percentage, "%\n")
+
+```
+
+```{r}
+library(ggplot2)
+# Assuming "education" is your education variable and "mobile_phone" is the mobile phone ownership variable (1 for owning)
+d$edu <- factor(d$edu, levels = 0:8)
+ggplot(na.omit(d), aes(x = edu, fill = factor(mobilephone))) +
+  geom_bar() +
+  labs(title = "Number of People Owning Mobile Phones by Education Level", x = "Education Level", y = "Count") +
+  scale_fill_manual(values = c("1" = "royalblue"), name = "Has access to a mobile phone 
+                    0: No education
+                    1:Nursery
+                    2: Primary
+                    3: Junior Secondary
+                    4: Senior Secondary
+                    5: Lower 6
+                    6: Upper 6
+                    7: Higher Education") +
+  theme_classic() 
+```
+
+```{r}
+d1 <- d %>% filter(!is.na(edu) & !is.na(mobilephone))
+
+ggplot(d1, aes(x = edu, fill = factor(internet))) +
+  geom_bar() +
+  labs(title = "Number of People with Access to Internet by Education Level", x = "Education Level", y = "Count") +
+  scale_fill_manual(values = c("1" = "royalblue", "0" = "darkred"), name = "Has access to internet 
+                    0: No education
+                    1:Nursery
+                    2: Primary
+                    3: Junior Secondary
+                    4: Senior Secondary
+                    5: Lower 6
+                    6: Upper 6
+                    7: Higher Education") +
+  theme_classic()
+```
+
+```{r}
+library(dplyr)
+
+# Calculate the percentage of internet access by urban/rural population
+internet_percentage <- d %>%
+  group_by(urban) %>%
+  summarize(internet_access = sum(!is.na(internet) & internet == "1") / sum(!is.na(internet)))
+
+
+# Calculate the percentage of mobile phone access by urban/rural population
+mobile_percentage <- d %>%
+  group_by(urban) %>%
+  summarize(mobile_phone_access = sum(!is.na(mobilephone) & mobilephone == "1") / sum(!is.na(mobilephone)))
+```
+
+```{r}
+internet_percentage
+```
+Shows that there is a drastic difference in access to internet among urban populations (1) compared to rural (0)
+
+```{r}
+mobile_percentage
+```
+Interestingly, not as drastic for mobile phone access. 
+
+Delving into where people commonly get their internet access from:
+```{r}
+# Update the loc_access variable based on the binary variables
+d$loc_access[d$personal_device == 1] <- 1
+d$loc_access[d$other_household == 1] <- 2
+d$loc_access[d$relative_friend == 1] <- 3
+d$loc_access[d$workplace == 1] <- 4
+d$loc_access[d$cafe == 1] <- 5
+d$loc_access[d$hotspot == 1] <- 6
+
+d1 <- na.omit(d)
+# Assuming you have a dataset named "d1"
+# Assuming you have a dataset named "d1"
+library(ggplot2)
+
+ggplot(d1, aes(x = factor(edu), fill = factor(loc_access))) +
+  geom_bar() +
+  labs(title = "Accessing Internet by Education Level",
+       x = "Education Level", y = "Counts") +
+  scale_fill_brewer(name = "Where do they access the internet?", palette = "Spectral", 
+                    labels = c("1: Personal Device", 
+                               "2: Household", 
+                               "3: Relative/Friend",
+                               "4: Workplace",
+                               "5: Cafe",
+                               "6: Hotspot")) +
+  theme(legend.position = "top") +
+  theme_classic() +
+  coord_flip()
+
+```
+```{r}
+write.csv(d, file = "nigeria_hsehold.csv", row.names = FALSE)
+```
