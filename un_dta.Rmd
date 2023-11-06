@@ -181,6 +181,7 @@ d$loc_access[d$hotspot == 1] <- 6
 d1 <- na.omit(d)
 # Assuming you have a dataset named "d1"
 # Assuming you have a dataset named "d1"
+library(viridis)
 library(ggplot2)
 pdf('loc_access_edu.pdf',
     width = 6,
@@ -189,7 +190,7 @@ ggplot(d1, aes(x = factor(edu), fill = factor(loc_access))) +
   geom_bar() +
   labs(title = "Accessing Internet by Education Level",
        x = "Education Level", y = "Counts") +
-  scale_fill_brewer(name = "Where do they access the internet?", palette = "Spectral", 
+  scale_fill_brewer(name = "Where do they access the internet?", palette = "Reds", 
                     labels = c("1: Personal Device", 
                                "2: Household", 
                                "3: Relative/Friend",
